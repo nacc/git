@@ -173,6 +173,19 @@ test_expect_success 'resulting reflog can be shown by log -g' '
 	test_cmp expect actual
 '
 
+test_expect_success 'git branch -M should leave orphaned HEAD alone' '
+	git init orphan &&
+	(
+		cd orphan &&
+		test_commit initial &&
+		git checkout --orphan lonely &&
+		grep lonely .git/HEAD &&
+		test_path_is_missing .git/refs/head/lonely &&
+		git branch -M master mistress &&
+		grep lonely .git/HEAD
+	)
+'
+
 test_expect_success 'git branch -M baz bam should succeed when baz is checked out as linked working tree' '
 	git checkout master &&
 	git worktree add -b baz bazdir &&
