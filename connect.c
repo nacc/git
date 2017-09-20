@@ -124,10 +124,11 @@ struct ref **get_remote_heads(int in, char *src_buf, size_t src_len,
 	 * response does not necessarily mean an ACL problem, though.
 	 */
 	int saw_response;
+	int seen_ref;
 	int got_dummy_ref_with_capabilities_declaration = 0;
 
 	*list = NULL;
-	for (saw_response = 0; ; saw_response = 1) {
+	for (saw_response = 0, seen_ref = 0; ; saw_response = 1) {
 		struct ref *ref;
 		struct object_id old_oid;
 		char *name;
@@ -165,6 +166,8 @@ struct ref **get_remote_heads(int in, char *src_buf, size_t src_len,
 
 		name_len = strlen(name);
 		if (len != name_len + GIT_SHA1_HEXSZ + 1) {
+			if (seen_ref)
+				; /* NEEDSWORK: Error out for multiple capabilities lines? */
 			free(server_capabilities);
 			server_capabilities = xstrdup(name + name_len + 1);
 		}
@@ -175,7 +178,7 @@ struct ref **get_remote_heads(int in, char *src_buf, size_t src_len,
 		}
 
 		if (!strcmp(name, "capabilities^{}")) {
-			if (saw_response)
+			if (seen_ref)
 				die("protocol error: unexpected capabilities^{}");
 			if (got_dummy_ref_with_capabilities_declaration)
 				die("protocol error: multiple capabilities^{}");
@@ -193,6 +196,7 @@ struct ref **get_remote_heads(int in, char *src_buf, size_t src_len,
 		oidcpy(&ref->old_oid, &old_oid);
 		*list = ref;
 		list = &ref->next;
+		seen_ref = 1;
 	}
 
 	annotate_refs_with_symref_info(*orig_list);
